@@ -63,19 +63,34 @@ class QLearningGhostAgent(ReinforcementGhostAgent):
 
 
     def computeValueFromQValues(self, state):
-        pass
+        possibleActions = self.getLegalActions(state)
+        if possibleActions:
+            maxv = float("-inf")
+            for action in possibleActions:
+                q = self.getQValue(state, action)
+                if q >= maxv:
+                    maxv = q
+            return maxv
+        return 0.0
         
     def computeActionFromQValues(self, state):
-        pass
+        possibleActions = self.getLegalActions(state)
+        if possibleActions:
+            maxv = float("-inf")
+            bestAction = None
+            for action in possibleActions:
+                q = self.getQValue(state, action)
+                if q >= maxv:
+                    maxv = q
+                    bestAction = action
+            return bestAction
+        return None
         
     def getWeights(self):
         return self.weights
 
-    def getQValue(self, state, action):
-        pass
-
-    def update(self, state, action, nextState, reward):
-        pass
+    def update(self, state, action, nextState, reward):        
+        self.q_values[(state, action)] += self.alpha * (reward + self.discount * self.q_values[(nextState,self.computeActionFromQValues(nextState))] - self.q_values[(state,action)])
 
     def final(self, state):
         "Called at the end of each game."
@@ -83,17 +98,25 @@ class QLearningGhostAgent(ReinforcementGhostAgent):
         ReinforcementGhostAgent.final(self, state) 
         # did we finish training?
         if self.episodesSoFar == self.numTraining:
-            
             # you might want to print your weights here for debugging
             "*** YOUR CODE HERE ***"
+            print(self.weights)
             #sys.exit(1)
-            pass
+            
 
     def getAction(self, state):
         #Uncomment the following if you want one of your agent to be a random agent.
-        #if self.agentIndex == 1:
-            #return random.choice(self.getLegalActions(state))
-        return 
+        action = None
+        if self.agentIndex == 1:
+            action = random.choice(self.getLegalActions(state))
+        else: 
+            if random.uniform(0,1) < self.epsilon:
+                action = random.choice(self.getLegalActions(state))
+            else:
+                action = self.computeActionFromQValues(state)
+
+        self.doAction(state, action)
+        return action
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
