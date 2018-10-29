@@ -38,7 +38,7 @@ class QLearningGhostAgent(ReinforcementGhostAgent):
         - self.getLegalActions(state)
           which returns legal actions for a state
     """
-    def __init__(self,epsilon=0.05,gamma=0.8,alpha=0.2, numTraining=0,agentIndex=1, extractor='GhostIdentityExtractor', **args):
+    def __init__(self,epsilon=0.05,gamma=0.8,alpha=0.2, numTraining=0,agentIndex=1, extractor='GhostAdvancedExtractor', **args):
         "You can initialize Q-values here..."
         args['epsilon'] = epsilon
         args['gamma'] = gamma
@@ -59,7 +59,13 @@ class QLearningGhostAgent(ReinforcementGhostAgent):
           Should return 0.0 if we have never seen a state
           or the Q node value otherwise
         """
-        return self.q_values[(state, action)]
+        qValue= 0.0
+        features = self.featExtractor.getFeatures(state, action)
+        for key in features.keys():
+           	qValue += (self.weights[key] * features[key])
+        
+        return qValue
+        #return self.q_values[(state, action)]
 
 
     def computeValueFromQValues(self, state):
@@ -89,8 +95,14 @@ class QLearningGhostAgent(ReinforcementGhostAgent):
     def getWeights(self):
         return self.weights
 
-    def update(self, state, action, nextState, reward):        
-        self.q_values[(state, action)] += self.alpha * (reward + self.discount * self.q_values[(nextState,self.computeActionFromQValues(nextState))] - self.q_values[(state,action)])
+    def update(self, state, action, nextState, reward): 
+        features = self.featExtractor.getFeatures(state, action)              
+     #   self.q_values[(state, action)] += self.alpha * (reward + self.discount * self.q_values[(nextState,self.computeActionFromQValues(nextState))] - self.q_values[(state,action)])
+        possibleStateQValues = []
+        for act in self.getLegalActions(state):
+    	    possibleStateQValues.append(self.getQValue(state, act))
+        for key in features.keys():
+            self.weights[key] += self.alpha*(reward+self.discount*((1-self.epsilon)*self.q_values[(nextState,self.computeActionFromQValues(nextState))]+(self.epsilon/len(possibleStateQValues))*(sum(possibleStateQValues)))- self.q_values[(state,action)]) * features[key]
 
     def final(self, state):
         "Called at the end of each game."
